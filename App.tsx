@@ -1,116 +1,226 @@
-import React, { useState } from "react";
+import React, {useState, useEffect} from 'react';
 import {
-  NativeModules,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  Text,
-  TouchableOpacity,
-  useColorScheme,
+  StyleSheet,
   View,
+  Text,
+  Button,
+  Platform,
 } from 'react-native';
 
-import {Colors, Header} from 'react-native/Libraries/NewAppScreen';
 import {
   Notification,
-  Notifications,
-  Registered,
-  RegistrationError,
-} from 'react-native-notifications';
+  NotificationAction,
+  NotificationBackgroundFetchResult, NotificationCategory,
+  Notifications, Registered, RegistrationError
+} from "react-native-notifications";
 
-const {WorkManagerModule} = NativeModules;
 
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+export default function App() {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [openedNotifications, setOpenedNotifications] = useState<Notification[]>([]);
+const TAG = 'API_CALL_RN'
+  useEffect(() => {
+    registerNotificationEvents();
+    setCategories();
+    getInitialNotification();
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
-  };
 
-  Notifications.registerRemoteNotifications();
+    Notifications.registerRemoteNotifications();
 
-  Notifications.events().registerRemoteNotificationsRegistered(
-    (event: Registered) => {
-      console.log('Device Token Received', event.deviceToken);
-    },
-  );
-  Notifications.events().registerRemoteNotificationsRegistrationFailed(
-    (event: RegistrationError) => {
-      console.error(event);
-    },
-  );
+    Notifications.events().registerRemoteNotificationsRegistered((event: Registered) => {
+      // TODO: Send the token to my server so it could send back push notifications...
+      console.log(TAG, "Device Token Received", event.deviceToken);
+    });
+    Notifications.events().registerRemoteNotificationsRegistrationFailed((event: RegistrationError) => {
+      console.error(TAG,event);
+    });
 
-  Notifications.events().registerNotificationReceivedForeground(
-    (notification: Notification, completion) => {
-      console.log(
-        `Notification received in foreground: ${notification.title} : ${notification.body}`,
-      );
-      completion({alert: true, sound: true, badge: false});
-    },
-  );
 
-  Notifications.events().registerNotificationReceivedBackground(
-    (notification: Notification, completion) => {
-      console.log(
-        `Notification received in BACKGROUND: ${notification.title} : ${notification.body}`,
-      );
-      WorkManagerModule.startWork('Number of start module ' + i);
-      completion({alert: true, sound: true, badge: false});
-    },
-  );
+  }, [])
 
-  Notifications.events().registerNotificationOpened(
-    (notification: Notification, completion) => {
-      console.log(`Notification opened: ${notification.payload}`);
+  const registerNotificationEvents = () => {
+    Notifications.events().registerNotificationReceivedForeground((notification, completion) => {
+      console.log(TAG, 'foreground');
+      setNotifications([...notifications, notification]);
+      completion({alert: notification.payload.showAlert, sound: false, badge: false});
+    });
+
+    Notifications.events().registerNotificationOpened((notification, completion) => {
+      setOpenedNotifications([notification, ...openedNotifications]);
       completion();
-    },
-  );
+    });
 
-  let i = 0;
+    Notifications.events().registerNotificationReceivedBackground((notification, completion) => {
+      console.log(TAG, 'background');
 
-  const [tapId,setTapId] = useState(i);
+      completion(NotificationBackgroundFetchResult.NO_DATA);
+    });
 
-  function handlePress() {
-    // WorkManagerModule.startWork('Number of start module ' + i)
-    //   .then(res => console.log(res))
-    //   .catch(e => console.log(e));
-    // i++;
-    // setTapId(i);
+    if (Platform.OS === 'ios') {
+      Notifications.ios.events().appNotificationSettingsLinked(() => {
+        console.warn('App Notification Settings Linked')
+      });
+    }
+  }
+
+  const requestPermissionsIos = (options) => {
+    Notifications.ios.registerRemoteNotifications(
+      Object.fromEntries(options.map(opt => [opt, true]))
+    );
+  }
+
+  const requestPermissions = () => {
+    Notifications.registerRemoteNotifications();
+  }
+
+  const setCategories = () => {
+    const upvoteAction = new NotificationAction(
+      'UPVOTE_ACTION',
+      'background',
+      String.fromCodePoint(0x1F44D),
+      false,
+    );
+
+    const replyAction = new NotificationAction(
+      'REPLY_ACTION',
+      'background',
+      'Reply',
+      true,
+      {
+        buttonTitle: 'Reply now',
+        placeholder: 'Insert message'
+      },
+    );
+
+
+    const category = new NotificationCategory(
+      'SOME_CATEGORY',
+      [upvoteAction, replyAction]
+    );
+
+    Notifications.setCategories([category]);
+  }
+
+  const sendLocalNotification = () => {
+    Notifications.postLocalNotification({
+      identifier: '0',
+      body: 'Local notification!',
+      title: 'Local Notification Title',
+      sound: 'chime.aiff',
+      badge: 0,
+      type: '',
+      thread: '',
+      payload: {
+        category: 'SOME_CATEGORY',
+        link: 'localNotificationLink',
+        android_channel_id: 'my-channel',
+      }
+    });
+  }
+
+  const removeAllDeliveredNotifications = () => {
+    Notifications.removeAllDeliveredNotifications();
+  }
+
+  const setNotificationChannel = () => {
+    Notifications.setNotificationChannel({
+      channelId: 'my-channel',
+      name: 'My Channel',
+      groupId: 'my-group-id',
+      groupName: 'my group name',
+      importance: 5,
+      description: 'My Description',
+      enableLights: true,
+      enableVibration: true,
+      showBadge: true,
+      soundFile: 'doorbell.mp3',
+      vibrationPattern: [200, 1000, 500, 1000, 500],
+    })
+  }
+
+  const getInitialNotification = async () => {
+    const initialNotification = await Notifications.getInitialNotification();
+    if (initialNotification) {
+      setNotifications([initialNotification, ...notifications]);
+    }
+  }
+
+  const renderNotification = (notification) => {
+    return (
+      <View style={{backgroundColor: 'lightgray', margin: 10}}>
+        <Text>{`Title: ${notification.title}`}</Text>
+        <Text>{`Body: ${notification.body}`}</Text>
+        <Text>{`Extra Link Param: ${notification.payload.link}`}</Text>
+      </View>
+    );
+  }
+
+  const renderOpenedNotification = (notification) => {
+    return (
+      <View style={{backgroundColor: 'lightgray', margin: 10}}>
+        <Text>{`Title: ${notification.title}`}</Text>
+        <Text>{`Body: ${notification.body}`}</Text>
+        <Text>{`Notification Clicked: ${notification.payload.link}`}</Text>
+      </View>
+    );
+  }
+
+  const checkPermissions = () => {
+    // Notifications.ios.checkPermissions().then((currentPermissions) => {
+    //   console.warn(currentPermissions);
+    // });
+  }
+
+  const isRegistered = () => {
+    Notifications.isRegisteredForRemoteNotifications().then((registered) => {
+      console.warn(registered);
+    });
   }
 
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <TouchableOpacity onPress={handlePress}>
-            <View
-              style={{
-                margin: 10,
-                borderRadius: 10,
-                padding: 15,
-                backgroundColor: '#FF0099',
-                alignItems: 'center',
-              }}>
-              <Text>Нажми на меня</Text>
-            </View>
-          </TouchableOpacity>
-          <View style={{ padding: 15 }}>
-            <Text>{`count of tap: ${tapId}`}</Text>
-          </View>
+    <View style={styles.container}>
+      <Button title={'Request permissions'} onPress={requestPermissions} testID={'requestPermissions'} />
+      {Platform.OS === 'ios' && Platform.Version > '12.0' && (<>
+        <Button title={'Request permissions with app notification settings'} onPress={() => requestPermissionsIos(['providesAppNotificationSettings'])} testID={'requestPermissionsWithAppSettings'} />
+        <Button title={'Request permissions with provisional'} onPress={() => requestPermissionsIos(['provisional'])} testID={'requestPermissionsWithAppSettings'} />
+        <Button title={'Request permissions with app notification settings and provisional'} onPress={() => requestPermissionsIos(['providesAppNotificationSettings', 'provisional'])} testID={'requestPermissionsWithAppSettings'} />
+        <Button title={'Check permissions'} onPress={checkPermissions} />
+      </>)}
+      {Platform.OS === 'android' &&
+        <Button title={'Set channel'} onPress={setNotificationChannel} testID={'setNotificationChannel'} />
+      }
+      <Button title={'Send local notification'} onPress={sendLocalNotification} testID={'sendLocalNotification'} />
+      <Button title={'Remove all delivered notifications'} onPress={removeAllDeliveredNotifications} />
+      <Button title={'Check registration'} onPress={isRegistered} />
+      {notifications.map((notification, idx) => (
+        <View key={`notification_${idx}`}>
+          {renderNotification(notification)}
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      ))}
+      {openedNotifications.map((notification, idx) => (
+        <View key={`notification_${idx}`}>
+          {renderOpenedNotification(notification)}
+        </View>
+      ))}
+    </View>
   );
 }
 
-export default App;
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F5FCFF',
+  },
+  welcome: {
+    fontSize: 20,
+    textAlign: 'center',
+    margin: 10,
+  },
+  instructions: {
+    textAlign: 'center',
+    color: '#333333',
+    marginBottom: 5,
+  },
+});
