@@ -1,59 +1,24 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
-
-import React from 'react';
-import type {PropsWithChildren} from 'react';
+import React, { useState } from "react";
 import {
+  NativeModules,
   SafeAreaView,
   ScrollView,
   StatusBar,
-  StyleSheet,
   Text,
+  TouchableOpacity,
   useColorScheme,
   View,
 } from 'react-native';
 
+import {Colors, Header} from 'react-native/Libraries/NewAppScreen';
 import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+  Notification,
+  Notifications,
+  Registered,
+  RegistrationError,
+} from 'react-native-notifications';
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
-
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
+const {WorkManagerModule} = NativeModules;
 
 function App(): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark';
@@ -61,6 +26,57 @@ function App(): React.JSX.Element {
   const backgroundStyle = {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   };
+
+  Notifications.registerRemoteNotifications();
+
+  Notifications.events().registerRemoteNotificationsRegistered(
+    (event: Registered) => {
+      console.log('Device Token Received', event.deviceToken);
+    },
+  );
+  Notifications.events().registerRemoteNotificationsRegistrationFailed(
+    (event: RegistrationError) => {
+      console.error(event);
+    },
+  );
+
+  Notifications.events().registerNotificationReceivedForeground(
+    (notification: Notification, completion) => {
+      console.log(
+        `Notification received in foreground: ${notification.title} : ${notification.body}`,
+      );
+      completion({alert: true, sound: true, badge: false});
+    },
+  );
+
+  Notifications.events().registerNotificationReceivedBackground(
+    (notification: Notification, completion) => {
+      console.log(
+        `Notification received in BACKGROUND: ${notification.title} : ${notification.body}`,
+      );
+      WorkManagerModule.startWork('Number of start module ' + i);
+      completion({alert: true, sound: true, badge: false});
+    },
+  );
+
+  Notifications.events().registerNotificationOpened(
+    (notification: Notification, completion) => {
+      console.log(`Notification opened: ${notification.payload}`);
+      completion();
+    },
+  );
+
+  let i = 0;
+
+  const [tapId,setTapId] = useState(i);
+
+  function handlePress() {
+    // WorkManagerModule.startWork('Number of start module ' + i)
+    //   .then(res => console.log(res))
+    //   .catch(e => console.log(e));
+    // i++;
+    // setTapId(i);
+  }
 
   return (
     <SafeAreaView style={backgroundStyle}>
@@ -76,43 +92,25 @@ function App(): React.JSX.Element {
           style={{
             backgroundColor: isDarkMode ? Colors.black : Colors.white,
           }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
+          <TouchableOpacity onPress={handlePress}>
+            <View
+              style={{
+                margin: 10,
+                borderRadius: 10,
+                padding: 15,
+                backgroundColor: '#FF0099',
+                alignItems: 'center',
+              }}>
+              <Text>Нажми на меня</Text>
+            </View>
+          </TouchableOpacity>
+          <View style={{ padding: 15 }}>
+            <Text>{`count of tap: ${tapId}`}</Text>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-});
 
 export default App;

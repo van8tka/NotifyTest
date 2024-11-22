@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "508804071102",
+    "project_id": "testvbr-ad93e",
+    "storage_bucket": "testvbr-ad93e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:508804071102:android:2c0c4817628d8aff6b28ef",
+        "android_client_info": {
+          "package_name": "ru.vbr.application"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDHr9LZ8ulZVODENPw12ohMT4xHAanHTWg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
