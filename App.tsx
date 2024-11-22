@@ -12,7 +12,7 @@ import {
   NotificationAction,
   NotificationBackgroundFetchResult, NotificationCategory,
   Notifications, Registered, RegistrationError
-} from "react-native-notifications";
+} from 'react-native-notifications';
 
 
 export default function App() {
