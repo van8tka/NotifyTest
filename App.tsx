@@ -1,83 +1,92 @@
 import React, {useState, useEffect} from 'react';
-import {
-  StyleSheet,
-  View,
-  Text,
-  Button,
-  Platform,
-} from 'react-native';
+import {StyleSheet, View, Text, Button, Platform} from 'react-native';
 
 import {
   Notification,
   NotificationAction,
-  NotificationBackgroundFetchResult, NotificationCategory,
-  Notifications, Registered, RegistrationError
+  NotificationBackgroundFetchResult,
+  NotificationCategory,
+  Notifications,
+  Registered,
+  RegistrationError,
 } from 'react-native-notifications';
-
 
 export default function App() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [openedNotifications, setOpenedNotifications] = useState<Notification[]>([]);
-const TAG = 'API_CALL_RN'
+  const [openedNotifications, setOpenedNotifications] = useState<
+    Notification[]
+  >([]);
+  const TAG = 'API_CALL_RN';
   useEffect(() => {
     registerNotificationEvents();
     setCategories();
     getInitialNotification();
 
-
     Notifications.registerRemoteNotifications();
 
-    Notifications.events().registerRemoteNotificationsRegistered((event: Registered) => {
-      // TODO: Send the token to my server so it could send back push notifications...
-      console.log(TAG, "Device Token Received", event.deviceToken);
-    });
-    Notifications.events().registerRemoteNotificationsRegistrationFailed((event: RegistrationError) => {
-      console.error(TAG,event);
-    });
-
-
-  }, [])
+    Notifications.events().registerRemoteNotificationsRegistered(
+      (event: Registered) => {
+        // TODO: Send the token to my server so it could send back push notifications...
+        console.log(TAG, 'Device Token Received', event.deviceToken);
+      },
+    );
+    Notifications.events().registerRemoteNotificationsRegistrationFailed(
+      (event: RegistrationError) => {
+        console.error(TAG, event);
+      },
+    );
+  }, []);
 
   const registerNotificationEvents = () => {
-    Notifications.events().registerNotificationReceivedForeground((notification, completion) => {
-      console.log(TAG, 'foreground');
-      setNotifications([...notifications, notification]);
-      completion({alert: notification.payload.showAlert, sound: false, badge: false});
-    });
+    Notifications.events().registerNotificationReceivedForeground(
+      (notification, completion) => {
+        console.log(TAG, 'foreground');
+        setNotifications([...notifications, notification]);
+        completion({
+          alert: notification.payload.showAlert,
+          sound: false,
+          badge: false,
+        });
+      },
+    );
 
-    Notifications.events().registerNotificationOpened((notification, completion) => {
-      setOpenedNotifications([notification, ...openedNotifications]);
-      completion();
-    });
+    Notifications.events().registerNotificationOpened(
+      (notification, completion) => {
+        setOpenedNotifications([notification, ...openedNotifications]);
+        completion();
+      },
+    );
 
-    Notifications.events().registerNotificationReceivedBackground((notification, completion) => {
-      console.log(TAG, 'background');
+    Notifications.events().registerNotificationReceivedBackground(
+      (notification, completion) => {
+        console.log(TAG, 'background');
 
-      completion(NotificationBackgroundFetchResult.NO_DATA);
-    });
+        completion(NotificationBackgroundFetchResult.NO_DATA);
+      },
+    );
 
     if (Platform.OS === 'ios') {
       Notifications.ios.events().appNotificationSettingsLinked(() => {
-        console.warn('App Notification Settings Linked')
+        console.warn('App Notification Settings Linked');
       });
     }
-  }
+  };
 
-  const requestPermissionsIos = (options) => {
+  const requestPermissionsIos = options => {
     Notifications.ios.registerRemoteNotifications(
-      Object.fromEntries(options.map(opt => [opt, true]))
+      Object.fromEntries(options.map(opt => [opt, true])),
     );
-  }
+  };
 
   const requestPermissions = () => {
     Notifications.registerRemoteNotifications();
-  }
+  };
 
   const setCategories = () => {
     const upvoteAction = new NotificationAction(
       'UPVOTE_ACTION',
       'background',
-      String.fromCodePoint(0x1F44D),
+      String.fromCodePoint(0x1f44d),
       false,
     );
 
@@ -88,18 +97,17 @@ const TAG = 'API_CALL_RN'
       true,
       {
         buttonTitle: 'Reply now',
-        placeholder: 'Insert message'
+        placeholder: 'Insert message',
       },
     );
 
-
-    const category = new NotificationCategory(
-      'SOME_CATEGORY',
-      [upvoteAction, replyAction]
-    );
+    const category = new NotificationCategory('SOME_CATEGORY', [
+      upvoteAction,
+      replyAction,
+    ]);
 
     Notifications.setCategories([category]);
-  }
+  };
 
   const sendLocalNotification = () => {
     Notifications.postLocalNotification({
@@ -114,13 +122,13 @@ const TAG = 'API_CALL_RN'
         category: 'SOME_CATEGORY',
         link: 'localNotificationLink',
         android_channel_id: 'my-channel',
-      }
+      },
     });
-  }
+  };
 
   const removeAllDeliveredNotifications = () => {
     Notifications.removeAllDeliveredNotifications();
-  }
+  };
 
   const setNotificationChannel = () => {
     Notifications.setNotificationChannel({
@@ -135,17 +143,17 @@ const TAG = 'API_CALL_RN'
       showBadge: true,
       soundFile: 'doorbell.mp3',
       vibrationPattern: [200, 1000, 500, 1000, 500],
-    })
-  }
+    });
+  };
 
   const getInitialNotification = async () => {
     const initialNotification = await Notifications.getInitialNotification();
     if (initialNotification) {
       setNotifications([initialNotification, ...notifications]);
     }
-  }
+  };
 
-  const renderNotification = (notification) => {
+  const renderNotification = notification => {
     return (
       <View style={{backgroundColor: 'lightgray', margin: 10}}>
         <Text>{`Title: ${notification.title}`}</Text>
@@ -153,9 +161,9 @@ const TAG = 'API_CALL_RN'
         <Text>{`Extra Link Param: ${notification.payload.link}`}</Text>
       </View>
     );
-  }
+  };
 
-  const renderOpenedNotification = (notification) => {
+  const renderOpenedNotification = notification => {
     return (
       <View style={{backgroundColor: 'lightgray', margin: 10}}>
         <Text>{`Title: ${notification.title}`}</Text>
@@ -163,34 +171,72 @@ const TAG = 'API_CALL_RN'
         <Text>{`Notification Clicked: ${notification.payload.link}`}</Text>
       </View>
     );
-  }
+  };
 
   const checkPermissions = () => {
     // Notifications.ios.checkPermissions().then((currentPermissions) => {
     //   console.warn(currentPermissions);
     // });
-  }
+  };
 
   const isRegistered = () => {
-    Notifications.isRegisteredForRemoteNotifications().then((registered) => {
+    Notifications.isRegisteredForRemoteNotifications().then(registered => {
       console.warn(registered);
     });
-  }
+  };
 
   return (
     <View style={styles.container}>
-      <Button title={'Request permissions'} onPress={requestPermissions} testID={'requestPermissions'} />
-      {Platform.OS === 'ios' && Platform.Version > '12.0' && (<>
-        <Button title={'Request permissions with app notification settings'} onPress={() => requestPermissionsIos(['providesAppNotificationSettings'])} testID={'requestPermissionsWithAppSettings'} />
-        <Button title={'Request permissions with provisional'} onPress={() => requestPermissionsIos(['provisional'])} testID={'requestPermissionsWithAppSettings'} />
-        <Button title={'Request permissions with app notification settings and provisional'} onPress={() => requestPermissionsIos(['providesAppNotificationSettings', 'provisional'])} testID={'requestPermissionsWithAppSettings'} />
-        <Button title={'Check permissions'} onPress={checkPermissions} />
-      </>)}
-      {Platform.OS === 'android' &&
-        <Button title={'Set channel'} onPress={setNotificationChannel} testID={'setNotificationChannel'} />
-      }
-      <Button title={'Send local notification'} onPress={sendLocalNotification} testID={'sendLocalNotification'} />
-      <Button title={'Remove all delivered notifications'} onPress={removeAllDeliveredNotifications} />
+      <Button
+        title={'Request permissions'}
+        onPress={requestPermissions}
+        testID={'requestPermissions'}
+      />
+      {Platform.OS === 'ios' && Platform.Version > '12.0' && (
+        <>
+          <Button
+            title={'Request permissions with app notification settings'}
+            onPress={() =>
+              requestPermissionsIos(['providesAppNotificationSettings'])
+            }
+            testID={'requestPermissionsWithAppSettings'}
+          />
+          <Button
+            title={'Request permissions with provisional'}
+            onPress={() => requestPermissionsIos(['provisional'])}
+            testID={'requestPermissionsWithAppSettings'}
+          />
+          <Button
+            title={
+              'Request permissions with app notification settings and provisional'
+            }
+            onPress={() =>
+              requestPermissionsIos([
+                'providesAppNotificationSettings',
+                'provisional',
+              ])
+            }
+            testID={'requestPermissionsWithAppSettings'}
+          />
+          <Button title={'Check permissions'} onPress={checkPermissions} />
+        </>
+      )}
+      {Platform.OS === 'android' && (
+        <Button
+          title={'Set channel'}
+          onPress={setNotificationChannel}
+          testID={'setNotificationChannel'}
+        />
+      )}
+      <Button
+        title={'Send local notification'}
+        onPress={sendLocalNotification}
+        testID={'sendLocalNotification'}
+      />
+      <Button
+        title={'Remove all delivered notifications'}
+        onPress={removeAllDeliveredNotifications}
+      />
       <Button title={'Check registration'} onPress={isRegistered} />
       {notifications.map((notification, idx) => (
         <View key={`notification_${idx}`}>
